@@ -3,6 +3,7 @@
 .idea_modules/*
 .idea_modules
 *.class
+*.iml
 target/*
 target
 project/project/*
