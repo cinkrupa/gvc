@@ -1,6 +1,30 @@
+/*
+ * Copyright (C) 2014  Marcin Krupa
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package pl.edu.agh.gvc.test;
 
-import com.tinkerpop.blueprints.*;
+import com.tinkerpop.blueprints.EdgeTestSuite;
+import com.tinkerpop.blueprints.Graph;
+import com.tinkerpop.blueprints.GraphTestSuite;
+import com.tinkerpop.blueprints.IndexTestSuite;
+import com.tinkerpop.blueprints.IndexableGraphTestSuite;
+import com.tinkerpop.blueprints.KeyIndexableGraphTestSuite;
+import com.tinkerpop.blueprints.TestSuite;
+import com.tinkerpop.blueprints.VertexTestSuite;
 import com.tinkerpop.blueprints.impls.GraphTest;
 import com.tinkerpop.blueprints.impls.neo4j2.Neo4j2Graph;
 import com.tinkerpop.blueprints.impls.tg.TinkerGraph;

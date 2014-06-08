@@ -1,10 +1,39 @@
+/*
+ * Copyright (C) 2014  Marcin Krupa
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package pl.edu.agh.gvc.graph;
 
-import com.tinkerpop.blueprints.*;
+import com.tinkerpop.blueprints.Direction;
+import com.tinkerpop.blueprints.Edge;
+import com.tinkerpop.blueprints.Element;
+import com.tinkerpop.blueprints.Features;
+import com.tinkerpop.blueprints.GraphQuery;
+import com.tinkerpop.blueprints.Index;
+import com.tinkerpop.blueprints.IndexableGraph;
+import com.tinkerpop.blueprints.KeyIndexableGraph;
+import com.tinkerpop.blueprints.Parameter;
+import com.tinkerpop.blueprints.TransactionalGraph;
+import com.tinkerpop.blueprints.Vertex;
 import org.joda.time.DateTime;
 import pl.edu.agh.gvc.EdgeLabels;
 import pl.edu.agh.gvc.ElementUtils;
-import pl.edu.agh.gvc.Properties;
+import pl.edu.agh.gvc.PropertyKeys;
+import pl.edu.agh.gvc.exception.ElementNotInCurrentRevisionException;
+import pl.edu.agh.gvc.exception.TransientElementException;
 
 import java.util.Set;
 
@@ -22,29 +51,29 @@ public class VersionGraph<T extends KeyIndexableGraph & IndexableGraph & Transac
 
     private void init() {
 
-        if (!baseGraph.getIndexedKeys(Vertex.class).contains(Properties.HEAD)) {
-            baseGraph.createIndex(Properties.HEAD.toString(), Vertex.class);
+        if (!baseGraph.getIndexedKeys(Vertex.class).contains(PropertyKeys.HEAD)) {
+            baseGraph.createIndex(PropertyKeys.HEAD, Vertex.class);
         }
 
-//        if (!baseGraph.getIndexedKeys(Vertex.class).contains(Properties.REVISION_NUMBER)) {
-//            baseGraph.createIndex(Properties.REVISION_NUMBER, Vertex.class);
-//        }
+        //        if (!baseGraph.getIndexedKeys(Vertex.class).contains(Properties.REVISION_NUMBER)) {
+        //            baseGraph.createIndex(Properties.REVISION_NUMBER, Vertex.class);
+        //        }
 
-        if (!baseGraph.getIndexedKeys(Vertex.class).contains(Properties.ID)) {
-            baseGraph.createKeyIndex(Properties.ID, Vertex.class);
+        if (!baseGraph.getIndexedKeys(Vertex.class).contains(PropertyKeys.ID)) {
+            baseGraph.createKeyIndex(PropertyKeys.ID, Vertex.class);
         }
 
-        if (!baseGraph.getIndexedKeys(Edge.class).contains(Properties.ID)) {
-            baseGraph.createKeyIndex(Properties.ID, Edge.class);
+        if (!baseGraph.getIndexedKeys(Edge.class).contains(PropertyKeys.ID)) {
+            baseGraph.createKeyIndex(PropertyKeys.ID, Edge.class);
         }
 
-        currentRevision = ElementUtils.getSingleElement(baseGraph, Properties.HEAD, true, Vertex.class);
+        currentRevision = ElementUtils.getSingleElement(baseGraph, PropertyKeys.HEAD, true, Vertex.class);
 
         if (currentRevision == null) {
             currentRevision = baseGraph.addVertex(null);
-            currentRevision.setProperty(Properties.HEAD, true);
+            currentRevision.setProperty(PropertyKeys.HEAD, true);
             //baseGraph.getIndex(Properties.HEAD, Vertex.class).put(Properties.HEAD, true, currentRevision);
-            currentRevision.setProperty(Properties.REVISION_NUMBER, ElementUtils.generateId());
+            currentRevision.setProperty(PropertyKeys.REVISION_NUMBER, ElementUtils.generateId());
         }
 
         baseGraph.commit();
@@ -146,14 +175,14 @@ public class VersionGraph<T extends KeyIndexableGraph & IndexableGraph & Transac
     @Override
     public void commit() {
         Vertex headRevision = baseGraph.addVertex(null);
-        headRevision.setProperty(Properties.HEAD, true);
-        currentRevision.removeProperty(Properties.HEAD);
+        headRevision.setProperty(PropertyKeys.HEAD, true);
+        currentRevision.removeProperty(PropertyKeys.HEAD);
         headRevision.addEdge(EdgeLabels.PREVIOUS_REVISION, currentRevision);
         for (Vertex versionVertex : currentRevision.getVertices(Direction.OUT, EdgeLabels.CONTAINS)) {
             headRevision.addEdge(EdgeLabels.CONTAINS, versionVertex);
         }
-        currentRevision.setProperty(Properties.REVISION_NUMBER, ElementUtils.generateId());
-        currentRevision.setProperty(Properties.COMMIT_DATE, new DateTime().toString());
+        currentRevision.setProperty(PropertyKeys.REVISION_NUMBER, ElementUtils.generateId());
+        currentRevision.setProperty(PropertyKeys.COMMIT_DATE, new DateTime().toString());
         currentRevision = headRevision;
         baseGraph.commit();
     }
@@ -191,97 +220,120 @@ public class VersionGraph<T extends KeyIndexableGraph & IndexableGraph & Transac
     }
 
     public void setProperty(Element element, String key, Object value) {
-        //TODO: implement
+        Vertex traceElement = ElementUtils.getTraceElement(baseGraph, element);
+        if (traceElement == null) {
+            throw new TransientElementException();
+        }
+        Vertex latestVersion = ElementUtils.getLatestVersion(traceElement);
+        if (latestVersion == null) {
+            throw new TransientElementException();
+        }
+        Edge currentRevisionEdge = ElementUtils.getRevisionEdge(latestVersion, currentRevision);
+        if (currentRevisionEdge == null) {
+            throw new ElementNotInCurrentRevisionException();
+        }
+
+        if (!ElementUtils.isPropertyModified(latestVersion, key, value)) {
+            return;
+        }
+
+        if (ElementUtils.hasMultipleElements(ElementUtils.getRevisionEdges(latestVersion))) {
+            latestVersion = ElementUtils.addNewVersionElement(baseGraph, element, traceElement, currentRevision, latestVersion);
+            latestVersion.setProperty(key, value);
+            return;
+        }
+
+        latestVersion.setProperty(key, value);
+
+        ElementUtils.revertIfUnmodified(latestVersion, traceElement, currentRevision);
     }
 
     public void removeProperty(Element element, String key) {
-        //TODO: implement
+        Vertex traceElement = ElementUtils.getTraceElement(baseGraph, element);
+        if (traceElement == null) {
+            throw new TransientElementException();
+        }
+        Vertex latestVersion = ElementUtils.getLatestVersion(traceElement);
+        if (latestVersion == null) {
+            throw new TransientElementException();
+        }
+        Edge currentRevisionEdge = ElementUtils.getRevisionEdge(latestVersion, currentRevision);
+        if (currentRevisionEdge == null) {
+            throw new ElementNotInCurrentRevisionException();
+        }
+
+        if (!latestVersion.getPropertyKeys().contains(key)) {
+            return;
+        }
+
+        if (ElementUtils.hasMultipleElements(ElementUtils.getRevisionEdges(latestVersion))) {
+            latestVersion = ElementUtils.addNewVersionElement(baseGraph, element, traceElement, currentRevision, latestVersion);
+            latestVersion.removeProperty(key);
+            return;
+        }
+
+        latestVersion.removeProperty(key);
+
+        ElementUtils.revertIfUnmodified(latestVersion, traceElement, currentRevision);
     }
 
     private void removeElement(Element element) {
-        Object traceElementId = element.getProperty(Properties.ID);
-        Vertex traceElement = ElementUtils.getSingleElement(baseGraph, Properties.ID, traceElementId, Vertex.class);
-        if (traceElement != null) {
-            Vertex latestVersion = ElementUtils.getSingleElement(traceElement.getVertices(Direction.OUT, EdgeLabels.LATEST_VERSION));
-            if (latestVersion != null) {
-
-                Edge currentRevisionEdge = ElementUtils.getSingleEdge(latestVersion, currentRevision, Direction.IN, EdgeLabels.CONTAINS);
-                if (currentRevisionEdge != null) {
-                    currentRevisionEdge.remove();
-                }
-                if (ElementUtils.isEmpty(latestVersion.getEdges(Direction.IN, EdgeLabels.CONTAINS))) {
-                    Vertex previousVersion = ElementUtils.getSingleElement(latestVersion.getVertices(Direction.OUT, EdgeLabels.PREVIOUS_VERSION));
-                    if (previousVersion != null) {
-                        traceElement.addEdge(EdgeLabels.LATEST_VERSION, previousVersion);
-                        latestVersion.remove();
-                    } else {
-                        latestVersion.remove();
-                        traceElement.remove();
-                    }
-                }
+        Vertex traceElement = ElementUtils.getTraceElement(baseGraph, element);
+        if (traceElement == null) {
+            throw new TransientElementException();
+        }
+        Vertex latestVersion = ElementUtils.getLatestVersion(traceElement);
+        if (latestVersion == null) {
+            throw new TransientElementException();
+        }
+        Edge currentRevisionEdge = ElementUtils.getRevisionEdge(latestVersion, currentRevision);
+        if (currentRevisionEdge != null) {
+            currentRevisionEdge.remove();
+        }
+        if (ElementUtils.isEmpty(ElementUtils.getRevisionEdges(latestVersion))) {
+            Vertex previousVersion = ElementUtils.getPreviousVersion(latestVersion);
+            latestVersion.remove();
+            if (previousVersion != null) {
+                traceElement.addEdge(EdgeLabels.LATEST_VERSION, previousVersion);
             } else {
                 traceElement.remove();
             }
         }
+
     }
 
     private Vertex addElement(Element element) {
-        Object traceElementId = element.getProperty(Properties.ID);
-        Vertex traceElement = ElementUtils.getSingleElement(baseGraph, Properties.ID, traceElementId, Vertex.class);
-        if (traceElement != null) {
-            Vertex latestVersion = ElementUtils.getSingleElement(traceElement.getVertices(Direction.OUT, EdgeLabels.LATEST_VERSION));
-            if (latestVersion != null) {
-                Edge currentRevisionEdge = ElementUtils.getSingleEdge(latestVersion, currentRevision, Direction.IN, EdgeLabels.CONTAINS);
-                if (!ElementUtils.isModified(element, latestVersion)) {
-                    if (currentRevisionEdge == null) currentRevision.addEdge(EdgeLabels.CONTAINS, latestVersion);
-                } else if (currentRevisionEdge != null) {
-                    currentRevisionEdge.remove();
-                    Vertex versionElement = baseGraph.addVertex(null);
-                    ElementUtils.copyProperties(element, versionElement, Properties.ID);
-                    traceElement.addEdge(EdgeLabels.LATEST_VERSION, versionElement);
-                    currentRevision.addEdge(EdgeLabels.CONTAINS, versionElement);
-                    if (ElementUtils.isEmpty(latestVersion.getEdges(Direction.IN, EdgeLabels.CONTAINS))) {
-                        Vertex previousVersion = ElementUtils.getSingleElement(latestVersion.getVertices(Direction.OUT, EdgeLabels.PREVIOUS_VERSION));
-                        if (previousVersion != null) {
-                            versionElement.addEdge(EdgeLabels.PREVIOUS_REVISION, previousVersion);
-                        }
-                        latestVersion.remove();
-                    } else {
-                        versionElement.addEdge(EdgeLabels.PREVIOUS_REVISION, latestVersion);
-                    }
-                    return versionElement;
-                } else {
-                    Vertex versionElement = baseGraph.addVertex(null);
-                    ElementUtils.copyProperties(element, versionElement, Properties.ID);
-                    versionElement.addEdge(EdgeLabels.PREVIOUS_REVISION, latestVersion);
-                    traceElement.addEdge(EdgeLabels.LATEST_VERSION, versionElement);
-                    currentRevision.addEdge(EdgeLabels.CONTAINS, versionElement);
-                    return versionElement;
-                }
-
+        Vertex traceElement = ElementUtils.getTraceElement(baseGraph, element);
+        if (traceElement == null) {
+            traceElement = ElementUtils.addNewTraceElement(baseGraph, element);
+            return ElementUtils.addNewVersionElement(baseGraph, element, traceElement, currentRevision);
+        }
+        Vertex latestVersion = ElementUtils.getLatestVersion(traceElement);
+        if (latestVersion == null) {
+            return ElementUtils.addNewVersionElement(baseGraph, element, traceElement, currentRevision);
+        }
+        Edge currentRevisionEdge = ElementUtils.getRevisionEdge(latestVersion, currentRevision);
+        if (currentRevisionEdge == null) {
+            if (ElementUtils.isModified(element, latestVersion)) {
+                return ElementUtils.addNewVersionElement(baseGraph, element, traceElement, currentRevision, latestVersion);
             } else {
-                Vertex versionElement = baseGraph.addVertex(null);
-                ElementUtils.copyProperties(element, versionElement, Properties.ID);
-                traceElement.addEdge(EdgeLabels.LATEST_VERSION, versionElement);
-                currentRevision.addEdge(EdgeLabels.CONTAINS, versionElement);
-                return versionElement;
+                currentRevision.addEdge(EdgeLabels.CONTAINS, latestVersion);
+                return latestVersion;
             }
-
-        } else {
-            traceElement = baseGraph.addVertex(null);
-            traceElement.setProperty(Properties.ID, traceElementId);
-            if (element instanceof Edge) {
-                traceElement.setProperty(Properties.EDGE, true);
-            } else {
-                traceElement.setProperty(Properties.VERTEX, true);
-            }
-            Vertex versionElement = baseGraph.addVertex(null);
-            ElementUtils.copyProperties(element, versionElement, Properties.ID);
-            traceElement.addEdge(EdgeLabels.LATEST_VERSION, versionElement);
-            currentRevision.addEdge(EdgeLabels.CONTAINS, versionElement);
-            return versionElement;
+        }
+        currentRevisionEdge.remove();
+        if (!ElementUtils.isEmpty(ElementUtils.getRevisionEdges(latestVersion))) {
+            return ElementUtils.addNewVersionElement(baseGraph, element, traceElement, currentRevision, latestVersion);
         }
 
-        return null;
+        latestVersion.remove();
+
+        Vertex previousVersion = ElementUtils.getPreviousVersion(latestVersion);
+
+        if (previousVersion == null) {
+            return ElementUtils.addNewVersionElement(baseGraph, element, traceElement, currentRevision);
+        }
+
+        return ElementUtils.addNewVersionElement(baseGraph, element, traceElement, currentRevision, previousVersion);
     }
 }

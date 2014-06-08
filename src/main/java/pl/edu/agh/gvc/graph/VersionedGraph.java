@@ -1,8 +1,34 @@
+/*
+ * Copyright (C) 2014  Marcin Krupa
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package pl.edu.agh.gvc.graph;
 
-import com.tinkerpop.blueprints.*;
+import com.tinkerpop.blueprints.Edge;
+import com.tinkerpop.blueprints.Element;
+import com.tinkerpop.blueprints.Features;
+import com.tinkerpop.blueprints.GraphQuery;
+import com.tinkerpop.blueprints.Index;
+import com.tinkerpop.blueprints.IndexableGraph;
+import com.tinkerpop.blueprints.KeyIndexableGraph;
+import com.tinkerpop.blueprints.Parameter;
+import com.tinkerpop.blueprints.TransactionalGraph;
+import com.tinkerpop.blueprints.Vertex;
 import pl.edu.agh.gvc.ElementUtils;
-import pl.edu.agh.gvc.Properties;
+import pl.edu.agh.gvc.PropertyKeys;
 
 import java.util.Set;
 
@@ -20,12 +46,12 @@ public class VersionedGraph<T extends KeyIndexableGraph & IndexableGraph & Trans
 
     private void init() {
 
-        if (!dataGraph.getIndexedKeys(Vertex.class).contains(Properties.ID)) {
-            dataGraph.createKeyIndex(Properties.ID, Vertex.class);
+        if (!dataGraph.getIndexedKeys(Vertex.class).contains(PropertyKeys.ID)) {
+            dataGraph.createKeyIndex(PropertyKeys.ID, Vertex.class);
         }
 
-        if (!dataGraph.getIndexedKeys(Edge.class).contains(Properties.ID)) {
-            dataGraph.createKeyIndex(Properties.ID, Edge.class);
+        if (!dataGraph.getIndexedKeys(Edge.class).contains(PropertyKeys.ID)) {
+            dataGraph.createKeyIndex(PropertyKeys.ID, Edge.class);
         }
 
         dataGraph.commit();
@@ -74,7 +100,7 @@ public class VersionedGraph<T extends KeyIndexableGraph & IndexableGraph & Trans
     @Override
     public VersionedVertex addVertex(Object o) {
         Vertex vertex = dataGraph.addVertex(o);
-        vertex.setProperty(Properties.ID, ElementUtils.generateId());
+        vertex.setProperty(PropertyKeys.ID, ElementUtils.generateId());
         versionGraph.addVertex(vertex);
         return new VersionedVertex(vertex, this);
     }
@@ -115,7 +141,7 @@ public class VersionedGraph<T extends KeyIndexableGraph & IndexableGraph & Trans
             baseV2 = ((VersionedVertex) v2).getBaseVertex();
         }
         Edge edge = dataGraph.addEdge(o, baseV1, baseV2, s);
-        edge.setProperty(Properties.ID, ElementUtils.generateId());
+        edge.setProperty(PropertyKeys.ID, ElementUtils.generateId());
         versionGraph.addEdge(edge);
         return new VersionedEdge(edge, this);
     }

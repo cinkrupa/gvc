@@ -17,19 +17,17 @@
 
 package pl.edu.agh.gvc;
 
-import com.google.common.collect.Sets;
+public class PropertyKeys {
 
-import java.util.Set;
+    public static final String COMMIT_DATE = "COMMIT_DATE";
 
-public class EdgeLabels {
+    public static final String HEAD = "HEAD";
 
-    public static final String CONTAINS = "CONTAINS";
+    public static final String ID = "$GVC.ID";
 
-    public static final String LATEST_VERSION = "LATEST_VERSION";
+    public static final String REVISION_NUMBER = "REVISION_NUMBER";
 
-    public static final String PREVIOUS_REVISION = "PREVIOUS_REVISION";
+    public static final String EDGE = "EDGE";
 
-    public static final String PREVIOUS_VERSION = "PREVIOUS_VERSION";
-
-    public static final Set<String> GVC_LABELS = Sets.newHashSet(CONTAINS, LATEST_VERSION, PREVIOUS_REVISION, PREVIOUS_VERSION);
+    public static final String VERTEX = "VERTEX";
 }

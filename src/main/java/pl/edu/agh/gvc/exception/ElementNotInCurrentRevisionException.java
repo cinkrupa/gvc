@@ -15,21 +15,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package pl.edu.agh.gvc;
+package pl.edu.agh.gvc.exception;
 
-import com.google.common.collect.Sets;
-
-import java.util.Set;
-
-public class EdgeLabels {
-
-    public static final String CONTAINS = "CONTAINS";
-
-    public static final String LATEST_VERSION = "LATEST_VERSION";
-
-    public static final String PREVIOUS_REVISION = "PREVIOUS_REVISION";
-
-    public static final String PREVIOUS_VERSION = "PREVIOUS_VERSION";
-
-    public static final Set<String> GVC_LABELS = Sets.newHashSet(CONTAINS, LATEST_VERSION, PREVIOUS_REVISION, PREVIOUS_VERSION);
-}
+public class ElementNotInCurrentRevisionException extends RuntimeException {}
