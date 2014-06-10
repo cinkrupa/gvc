@@ -197,7 +197,7 @@ public class ElementUtils {
 
     public static Vertex addNewVersionElement(Graph graph, Element element, Vertex traceElement, Vertex currentRevision) {
         Vertex versionElement = graph.addVertex(null);
-        ElementUtils.copyProperties(element, versionElement, PropertyKeys.ID);
+        copyProperties(element, versionElement, PropertyKeys.ID);
         Edge latestVersionEdge = ElementUtils.getSingleElement(traceElement.getEdges(Direction.OUT, EdgeLabels.LATEST_VERSION));
         if (latestVersionEdge != null) {
             Edge currentRevisionEdge = ElementUtils.getSingleEdge(currentRevision, latestVersionEdge.getVertex(Direction.IN), Direction.OUT, EdgeLabels.CONTAINS);

@@ -50,9 +50,8 @@ public class VersionGraph<T extends KeyIndexableGraph & IndexableGraph & Transac
     }
 
     private void init() {
-
         if (!baseGraph.getIndexedKeys(Vertex.class).contains(PropertyKeys.HEAD)) {
-            baseGraph.createIndex(PropertyKeys.HEAD, Vertex.class);
+            baseGraph.createKeyIndex(PropertyKeys.HEAD, Vertex.class);
         }
 
         //        if (!baseGraph.getIndexedKeys(Vertex.class).contains(Properties.REVISION_NUMBER)) {
@@ -63,9 +62,9 @@ public class VersionGraph<T extends KeyIndexableGraph & IndexableGraph & Transac
             baseGraph.createKeyIndex(PropertyKeys.ID, Vertex.class);
         }
 
-        if (!baseGraph.getIndexedKeys(Edge.class).contains(PropertyKeys.ID)) {
-            baseGraph.createKeyIndex(PropertyKeys.ID, Edge.class);
-        }
+        //        if (!baseGraph.getIndexedKeys(Edge.class).contains(PropertyKeys.ID)) {
+        //            baseGraph.createKeyIndex(PropertyKeys.ID, Edge.class);
+        //        }
 
         currentRevision = ElementUtils.getSingleElement(baseGraph, PropertyKeys.HEAD, true, Vertex.class);
 
