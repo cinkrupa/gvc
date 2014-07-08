@@ -31,5 +31,10 @@ public class EdgeLabels {
 
     public static final String PREVIOUS_VERSION = "PREVIOUS_VERSION";
 
-    public static final Set<String> GVC_LABELS = Sets.newHashSet(CONTAINS, LATEST_VERSION, PREVIOUS_REVISION, PREVIOUS_VERSION);
+    public static final String IN_EDGE = "IN_EDGE";
+
+    public static final String OUT_EDGE = "OUT_EDGE";
+
+    public static final Set<String> GVC_LABELS = Sets.newHashSet(CONTAINS, LATEST_VERSION, PREVIOUS_REVISION,
+            PREVIOUS_VERSION, IN_EDGE, OUT_EDGE);
 }

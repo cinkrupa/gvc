@@ -26,6 +26,7 @@ import com.tinkerpop.blueprints.Element;
 import com.tinkerpop.blueprints.Graph;
 import com.tinkerpop.blueprints.Vertex;
 import org.apache.commons.lang.ObjectUtils;
+import pl.edu.agh.gvc.exception.TransientElementException;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -78,7 +79,8 @@ public class ElementUtils {
     }
 
     public static <E extends Element> E getSingleElement(Graph graph, String key, Object value, Class<E> eClass) {
-        Iterable<? extends Element> it = Vertex.class.isAssignableFrom(eClass) ? graph.getVertices(key, value) : graph.getEdges(key, value);
+        Iterable<? extends Element> it = Vertex.class.isAssignableFrom(eClass) ? graph.getVertices(key,
+                value) : graph.getEdges(key, value);
         Iterator<? extends Element> iter = it.iterator();
 
         E e = null;
@@ -134,16 +136,19 @@ public class ElementUtils {
     public static boolean isModified(Element e1, Element e2) {
         Set<String> propertyKeys1 = e1.getPropertyKeys();
         Set<String> propertyKeys2 = e2.getPropertyKeys();
-        if (propertyKeys1.equals(propertyKeys2)) {
-            for (String key : propertyKeys1) {
-                if (!ObjectUtils.equals(e1.getProperty(key), e2.getProperty(key))) {
-                    return true;
-                }
-            }
-            return false;
+        if (!propertyKeys1.equals(propertyKeys2)) {
+            return true;
         }
-        return true;
-
+        for (String key : propertyKeys1) {
+            if (!ObjectUtils.equals(e1.getProperty(key), e2.getProperty(key))) {
+                return true;
+            }
+        }
+        if (e1 instanceof Vertex && e2 instanceof Vertex && !getVersionedEdgeIds((Vertex) e1).equals
+                (getVersionedEdgeIds((Vertex) e2))) {
+            return true;
+        }
+        return false;
     }
 
     public static Edge getSingleEdge(Vertex vertex1, Vertex vertex2, Direction direction, String... labels) {
@@ -152,8 +157,7 @@ public class ElementUtils {
                 return edge;
             }
         }
-        return null;
-
+        throw new TransientElementException();
     }
 
     public static Iterable<Edge> filterEdges(Vertex vertex, Direction direction, Set<String> excludedLabels) {
@@ -173,7 +177,7 @@ public class ElementUtils {
                 return ElementUtils.getSingleElement(graph, PropertyKeys.ID, traceElementId, Vertex.class);
             }
         }
-        return null;
+        throw new TransientElementException();
     }
 
     public static Edge getRevisionEdge(Vertex versionElement, Vertex revisionElement) {
@@ -195,12 +199,15 @@ public class ElementUtils {
         return traceElement;
     }
 
-    public static Vertex addNewVersionElement(Graph graph, Element element, Vertex traceElement, Vertex currentRevision) {
+    public static Vertex addNewVersionElement(Graph graph, Element element, Vertex traceElement,
+                                              Vertex currentRevision) {
         Vertex versionElement = graph.addVertex(null);
         copyProperties(element, versionElement, PropertyKeys.ID);
-        Edge latestVersionEdge = ElementUtils.getSingleElement(traceElement.getEdges(Direction.OUT, EdgeLabels.LATEST_VERSION));
+        Edge latestVersionEdge = ElementUtils.getSingleElement(traceElement.getEdges(Direction.OUT,
+                EdgeLabels.LATEST_VERSION));
         if (latestVersionEdge != null) {
-            Edge currentRevisionEdge = ElementUtils.getSingleEdge(currentRevision, latestVersionEdge.getVertex(Direction.IN), Direction.OUT, EdgeLabels.CONTAINS);
+            Edge currentRevisionEdge = ElementUtils.getSingleEdge(currentRevision,
+                    latestVersionEdge.getVertex(Direction.IN), Direction.OUT, EdgeLabels.CONTAINS);
             if (currentRevisionEdge != null) {
                 currentRevisionEdge.remove();
             }
@@ -208,21 +215,42 @@ public class ElementUtils {
         }
         traceElement.addEdge(EdgeLabels.LATEST_VERSION, versionElement);
         currentRevision.addEdge(EdgeLabels.CONTAINS, versionElement);
+        if (element instanceof Vertex) {
+            connectEdges(graph, (Vertex) element, versionElement);
+        }
         return versionElement;
     }
 
-    public static Vertex addNewVersionElement(Graph graph, Element element, Vertex traceElement, Vertex currentRevision, Vertex latestVersion) {
+    private static void connectEdges(Graph graph, Vertex vertex, Vertex versionElement) {
+        for (Edge edge : ElementUtils.filterEdges(vertex, Direction.IN, EdgeLabels.GVC_LABELS)) {
+            Vertex edgeTraceElement = ElementUtils.getTraceElement(graph, edge);
+            versionElement.addEdge(EdgeLabels.IN_EDGE, edgeTraceElement);
+        }
+        for (Edge edge : ElementUtils.filterEdges(vertex, Direction.OUT, EdgeLabels.GVC_LABELS)) {
+            Vertex edgeTraceElement = ElementUtils.getTraceElement(graph, edge);
+            versionElement.addEdge(EdgeLabels.OUT_EDGE, edgeTraceElement);
+        }
+    }
+
+    public static Vertex addNewVersionElement(Graph graph, Element element, Vertex traceElement,
+                                              Vertex currentRevision, Vertex latestVersion) {
         Vertex versionElement = addNewVersionElement(graph, element, traceElement, currentRevision);
         versionElement.addEdge(EdgeLabels.PREVIOUS_VERSION, latestVersion);
         return versionElement;
     }
 
     public static Vertex getLatestVersion(Vertex traceElement) {
-        return ElementUtils.getSingleElement(traceElement.getVertices(Direction.OUT, EdgeLabels.LATEST_VERSION));
+        Vertex latestVersion = ElementUtils.getSingleElement(traceElement.getVertices(Direction.OUT,
+                EdgeLabels.LATEST_VERSION));
+        if (latestVersion != null) {
+            return latestVersion;
+        }
+        throw new TransientElementException();
     }
 
     public static boolean isPropertyModified(Vertex versionElement, String key, Object value) {
-        return !versionElement.getPropertyKeys().contains(key) || !ObjectUtils.equals(value, versionElement.getProperty(key));
+        return !versionElement.getPropertyKeys().contains(key) || !ObjectUtils.equals(value,
+                versionElement.getProperty(key));
 
     }
 
@@ -237,5 +265,16 @@ public class ElementUtils {
             traceElement.addEdge(EdgeLabels.LATEST_VERSION, previousVersion);
             revision.addEdge(EdgeLabels.CONTAINS, previousVersion);
         }
+    }
+
+    public static Set<String> getVersionedEdgeIds(Vertex vertex) {
+        Set<String> edgeIds = Sets.newHashSet();
+        for (Edge e : vertex.getEdges(Direction.OUT, EdgeLabels.IN_EDGE)) {
+            edgeIds.add((String) e.getVertex(Direction.OUT).getProperty(PropertyKeys.ID));
+        }
+        for (Edge e : vertex.getEdges(Direction.OUT, EdgeLabels.OUT_EDGE)) {
+            edgeIds.add((String) e.getVertex(Direction.OUT).getProperty(PropertyKeys.ID));
+        }
+        return edgeIds;
     }
 }

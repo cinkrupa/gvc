@@ -17,6 +17,7 @@
 
 package pl.edu.agh.gvc.graph;
 
+import com.google.common.collect.Sets;
 import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Element;
@@ -33,7 +34,6 @@ import pl.edu.agh.gvc.EdgeLabels;
 import pl.edu.agh.gvc.ElementUtils;
 import pl.edu.agh.gvc.PropertyKeys;
 import pl.edu.agh.gvc.exception.ElementNotInCurrentRevisionException;
-import pl.edu.agh.gvc.exception.TransientElementException;
 
 import java.util.Set;
 
@@ -196,13 +196,63 @@ public class VersionGraph<T extends KeyIndexableGraph & IndexableGraph & Transac
         return baseGraph.addEdge(o, vertex, vertex2, label);
     }
 
-    //TODO: update incoming and outgoing vertices
     public Vertex addEdge(Edge edge) {
-        return addElement(edge);
+        Vertex edgeElement = addElement(edge);
+        updateEndpoints(edge);
+        return edgeElement;
+    }
+
+    private void updateEndpoints(Edge edge) {
+        Vertex edgeTraceElement = ElementUtils.getTraceElement(baseGraph, edge);
+        updateEndpoint(edgeTraceElement, edge.getVertex(Direction.IN), EdgeLabels.IN_EDGE);
+        updateEndpoint(edgeTraceElement, edge.getVertex(Direction.OUT), EdgeLabels.OUT_EDGE);
+    }
+
+    private void updateEndpoint(Vertex edgeTraceElement, Vertex vertex, String edgeLabel) {
+
+        String edgeId = edgeTraceElement.getProperty(PropertyKeys.ID);
+        Vertex traceElement = ElementUtils.getTraceElement(baseGraph, vertex);
+        Vertex latestVersion = ElementUtils.getLatestVersion(traceElement);
+
+        Edge currentRevisionEdge = ElementUtils.getRevisionEdge(latestVersion, currentRevision);
+        if (currentRevisionEdge == null) {
+            Set<String> edgeIds = ElementUtils.getVersionedEdgeIds(vertex);
+            edgeIds.add(edgeId);
+            if (!edgeIds.equals(ElementUtils.getVersionedEdgeIds(latestVersion))) {
+                latestVersion = ElementUtils.addNewVersionElement(baseGraph, vertex, traceElement, currentRevision,
+                        latestVersion);
+            } else {
+                currentRevision.addEdge(EdgeLabels.CONTAINS, latestVersion);
+                return;
+            }
+        }
+        for (Edge e : latestVersion.getEdges(Direction.OUT, edgeLabel)) {
+            if (edgeId.equals(e.getVertex(Direction.OUT).getProperty(PropertyKeys.ID))) {
+                return;
+            }
+        }
+        latestVersion.addEdge(edgeLabel, edgeTraceElement);
+        ElementUtils.revertIfUnmodified(latestVersion, traceElement, currentRevision);
     }
 
     @Override
     public void removeEdge(Edge edge) {
+        String edgeId = edge.getProperty(PropertyKeys.ID);
+        for (Vertex vertex : Sets.newHashSet(edge.getVertex(Direction.IN), edge.getVertex(Direction.OUT))) {
+            Vertex vertexTraceElement = ElementUtils.getTraceElement(baseGraph, vertex);
+            Vertex latestVersion = ElementUtils.getLatestVersion(vertexTraceElement);
+            Edge currentRevisionEdge = ElementUtils.getRevisionEdge(latestVersion, currentRevision);
+            if (currentRevisionEdge == null) {
+                latestVersion = ElementUtils.addNewVersionElement(baseGraph, vertex, vertexTraceElement,
+                        currentRevision, latestVersion);
+            }
+            for (Edge e : latestVersion.getEdges(Direction.OUT, EdgeLabels.IN_EDGE, EdgeLabels.OUT_EDGE)) {
+                if (edgeId.equals(e.getVertex(Direction.OUT).getProperty(PropertyKeys.ID))) {
+                    e.remove();
+                }
+            }
+        }
+        ;
         removeElement(edge);
     }
 
@@ -213,20 +263,14 @@ public class VersionGraph<T extends KeyIndexableGraph & IndexableGraph & Transac
     @Override
     public void removeVertex(Vertex vertex) {
         for (Edge edge : ElementUtils.filterEdges(vertex, Direction.BOTH, EdgeLabels.GVC_LABELS)) {
-            removeElement(edge);
+            removeEdge(edge);
         }
         removeElement(vertex);
     }
 
     public void setProperty(Element element, String key, Object value) {
         Vertex traceElement = ElementUtils.getTraceElement(baseGraph, element);
-        if (traceElement == null) {
-            throw new TransientElementException();
-        }
         Vertex latestVersion = ElementUtils.getLatestVersion(traceElement);
-        if (latestVersion == null) {
-            throw new TransientElementException();
-        }
         Edge currentRevisionEdge = ElementUtils.getRevisionEdge(latestVersion, currentRevision);
         if (currentRevisionEdge == null) {
             throw new ElementNotInCurrentRevisionException();
@@ -249,13 +293,7 @@ public class VersionGraph<T extends KeyIndexableGraph & IndexableGraph & Transac
 
     public void removeProperty(Element element, String key) {
         Vertex traceElement = ElementUtils.getTraceElement(baseGraph, element);
-        if (traceElement == null) {
-            throw new TransientElementException();
-        }
         Vertex latestVersion = ElementUtils.getLatestVersion(traceElement);
-        if (latestVersion == null) {
-            throw new TransientElementException();
-        }
         Edge currentRevisionEdge = ElementUtils.getRevisionEdge(latestVersion, currentRevision);
         if (currentRevisionEdge == null) {
             throw new ElementNotInCurrentRevisionException();
@@ -278,13 +316,7 @@ public class VersionGraph<T extends KeyIndexableGraph & IndexableGraph & Transac
 
     private void removeElement(Element element) {
         Vertex traceElement = ElementUtils.getTraceElement(baseGraph, element);
-        if (traceElement == null) {
-            throw new TransientElementException();
-        }
         Vertex latestVersion = ElementUtils.getLatestVersion(traceElement);
-        if (latestVersion == null) {
-            throw new TransientElementException();
-        }
         Edge currentRevisionEdge = ElementUtils.getRevisionEdge(latestVersion, currentRevision);
         if (currentRevisionEdge != null) {
             currentRevisionEdge.remove();

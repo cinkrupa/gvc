@@ -39,17 +39,18 @@ public class VersionedGraphTest {
 
             Vertex v3 = graph.addVertex(null);
             v3.setProperty("p2", 0);
+            v1.setProperty("p1", 1);
 
             graph.commit();
 
-            v1.setProperty("p1", 1);
-            v2.remove();
+            e1.remove();
 
             graph.commit();
 
             v1.setProperty("p1", 2);
             v1.setProperty("p1", 1);
             v3.removeProperty("p2");
+            v2.remove();
 
             graph.commit();
         } finally {
