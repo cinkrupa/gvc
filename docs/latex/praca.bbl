@@ -1,0 +1,36 @@
+\begin{thebibliography}{RWE13}
+
+\bibitem[AG08]{journals/csur/AnglesG08}
+Renzo Angles and Claudio Gutiérrez.
+\newblock Survey of graph database models.
+\newblock {\em ACM Comput. Surv.}, 40(1), 2008.
+
+\bibitem[Cha09]{chacon:progit}
+Scott Chacon.
+\newblock {\em Pro Git: professional version control}.
+\newblock Apress, July 2009.
+
+\bibitem[CL13]{conf/icdim/CastelltortL13}
+Arnaud Castelltort and Anne Laurent.
+\newblock Representing history in graph-oriented nosql databases: A versioning
+  system.
+\newblock In Imran~Sarwar Bajwa, M.~Asif Naeem, and Pit Pichappan, editors,
+  {\em ICDIM}, pages 228--234. IEEE, 2013.
+
+\bibitem[KSP13]{journals/corr/abs-1302-5549}
+Georgia Koloniari, Dimitris Souravlias, and Evaggelia Pitoura.
+\newblock On graph deltas for historical queries.
+\newblock {\em CoRR}, abs/1302.5549, 2013.
+
+\bibitem[RWE13]{RobinsonWebberEifrem13}
+Ian Robinson, Jim Webber, and Emil Eifrem.
+\newblock {\em Graph Databases}.
+\newblock O'Reilly, Beijing, 2013.
+
+\bibitem[SF13]{SadalageFowler13}
+Pramod~J. Sadalage and Martin Fowler.
+\newblock {\em NoSQL distilled : a brief guide to the emerging world of
+  polyglot persistence}.
+\newblock Addison-Wesley, Upper Saddle River, NJ, 2013.
+
+\end{thebibliography}

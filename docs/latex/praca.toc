@@ -1,0 +1,19 @@
+\select@language {polish}
+\contentsline {chapter}{\numberline {1}Wst\IeC {\k e}p}{7}
+\contentsline {section}{\numberline {1.1}Cele pracy}{7}
+\contentsline {section}{\numberline {1.2}Zawarto\IeC {\'s}\IeC {\'c} pracy}{7}
+\contentsline {chapter}{\numberline {2}Wprowadzenie}{9}
+\contentsline {section}{\numberline {2.1}Relacyjne bazy danych}{9}
+\contentsline {subsection}{\numberline {2.1.1}Zalety relacyjnych baz danych}{9}
+\contentsline {section}{\numberline {2.2}Czym jest \emph {NoSQL}}{12}
+\contentsline {subsubsection}{Za\IeC {\l }o\IeC {\.z}enia \emph {NoSQL}}{12}
+\contentsline {subsubsection}{Podzia\IeC {\l } baz \emph {NoSQL}}{12}
+\contentsline {section}{\numberline {2.3}Grafowe bazy danych}{12}
+\contentsline {subsubsection}{Model grafu z w\IeC {\l }a\IeC {\'s}ciwo\IeC {\'s}ciami}{13}
+\contentsline {section}{\numberline {2.4}TinkerPop Blueprints}{14}
+\contentsline {section}{\numberline {2.5}Wersjonowanie danych grafowych}{15}
+\contentsline {subsubsection}{\emph {Git}}{15}
+\contentsline {subsubsection}{\emph {Antiquity}}{15}
+\contentsline {subsubsection}{\emph {FluxGraph}}{15}
+\contentsline {subsubsection}{Zapisywanie r\IeC {\'o}\IeC {\.z}nic pomi\IeC {\k e}dzy zmianami}{15}
+\contentsline {subsubsection}{Graf historyczny o odmiennej strukturze}{15}

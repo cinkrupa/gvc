@@ -1,0 +1,56 @@
+\chapter{Koncepcja rozwiązania i wymagania}
+\label{cha:koncepcja}
+
+W rozdziale tym zdefiniowano wymagania względem docelowego systemu oraz ogólną koncepcję rozwiązania.
+
+%---------------------------------------------------------------------------
+
+\section{Wymagania funkcjonalne}
+\label{sec:wymaganiaFunkcjonalne}
+
+\begin{itemize}
+\renewcommand{\labelitemi}{$\bullet$}
+  \item Tworzenie wersjonowanego grafu (\emph{init})
+  \item Konwersja istniejącego grafu na graf wersjonowany (\emph{init} + \emph{add} + \emph{commit})
+  \item Pobranie wersjonowanego grafu z serwera (\emph{clone})
+  \item Pobranie najnowszych zmian z serwera (\emph{fetch})
+  \item Scalenie zmian (\emph{merge})
+  \item Uaktualnienie danych do najnowszej wersji z serwera (pobranie zmian i automatyczne scalenie) (\emph{pull})
+  \item Zapisanie bieżącego stanu grafu jako nowej wersji (\emph{add} + \emph{commit})
+  \item Tworzenie gałęzi (\emph{branch}), przełączanie się pomiędzy gałęziami (\emph{checkout})
+  \item Wyświetlenie szczegółów zmian, porównania pomiędzy dwoma zmianami (\emph{diff})
+  \item Wysłanie zmian na serwer (\emph{push})
+  \item Wycofanie zmian (\emph{revert})
+  \item Przywrócenie wybranych danych do konkretnej wersji (\emph{checkout})
+\end{itemize}
+
+%---------------------------------------------------------------------------
+
+\section{Wymagania niefunkcjonalne}
+\label{sec:wymaganiaNiefunkcjonalne}
+
+\begin{itemize}
+\renewcommand{\labelitemi}{$\bullet$}
+\renewcommand{\labelitemii}{$\bullet$}
+  \item Wymagania systemowe i technologiczne
+  \begin{itemize}
+     \item Interfejs konsolowy
+     \item API  udostępniające pełną funkcjonalność (Java, Scala)
+     \item Możliwość wykorzystania różnych grafowych baz danych
+     \item System rozproszony (wzorowany na \emph{Git})
+  \end{itemize}
+\end{itemize}
+
+
+
+%---------------------------------------------------------------------------
+
+\section{Koncepcja rozwiązania}
+\label{sec:koncepcjaRozwiazania}
+
+Zakłada się, że wszystkie dane, konieczne do wersjonowania grafu, będą przechowywane w bazie danych, która podlega wersjonowaniu. Mechanizm wersjonowania korzystał będzie z interfejsu grafowego \emph{Tinkerpop Blueprints}, co umożliwi skorzystanie z różnych systemów bazodanowych. Obecnie dostępne są implementacje dla: TinkerGraph, Neo4J, Sail, OrientDB, Dex, Accumulo, ArangoDB, Bitsy, FluxGraph, FoundationDB, InfiniteGraph, MongoDB, Oracle NoSQL, Titan.
+
+\begin{description}
+\item[Koncepcja 1] Działanie zbliżone do \emph{Git}, czyli zmiany zostają poddane kontroli wersji w wyniku wywołania funkcji \emph{commit}. Użytkownik wprowadza dowolne zmiany w bazie danych i w wybranym przez siebie momencie tworzy \emph{snapshota}. Zaletą takiego rozwiązania jest przejrzysta historia zmian i mniejszy narzut na rozmiar bazy danych. Wadą jest to, że historia zmian nie jest zapisywana automatycznie. Schemat wersjonowanego grafu będzie przypomniał ten z rysunku~\ref{fig:gitTree}
+\item[Koncepcja 2] Każda operacja na danych (dodanie/usunięcie wierzchołka/krawędzi lub grupy wierzchołków/krawędzi, edycja właściwości wierzchołka/krawędzi) prowadzi do powstania nowszej wersji grafu (generowany jest nowy numer wersji i nadawany jest on nowym wierzchołkom/krawędziom lub znacznikom usunięcia wierzchołka/krawędzi). Historia zapisywana jest więc automatycznie, lecz jest mniej przejrzysta (duża ziarnistość \emph{commitów}), wymaga też zapisania większej ilości informacji w bazie danych. Według tej koncepcji działa wersjonowany graf \emph{Antiquity}\footnote{\url{https://github.com/asaf/antiquity}}, będący pluginem do \emph{Blueprints}, nie zostanie on jednak wykorzystany z uwagi na zbyt ubogą dokumentację (brak informacji w jaki sposób dane o wersjach przechowywane są wewnętrznie, nie ma więc pewności, że jest to rozwiązanie optymalne) oraz zbyt małą funkcjonalność (nie przechowuje autorów zmian).
+\end{description}

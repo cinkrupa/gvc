@@ -1,0 +1,9 @@
+MGR
+
+* dydaktyka.iisg.agh.edu.pl
+* UŻYTKOWNICY - co kto zmieniał, kiedy (jak git)
+* RAPORT
+	- porównanie popularnych baz danych
+	- wersjonowanie
+* zaproponować własne wymagania
+* diff
